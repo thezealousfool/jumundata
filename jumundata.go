@@ -316,6 +316,30 @@ func getSingleDelegHandler(w http.ResponseWriter, req *http.Request) {
     getSingleDeleg(w, true)
 }
 
+func getAccomHandler(w http.ResponseWriter, req *http.Request) {
+    w.Header().Set("Content-Type", "application/csv")
+    w.Header().Set("Content-Disposition", `inline; filename="accommodation.csv"`)
+    getAccom(w)
+}
+
+func getMerchHandler(w http.ResponseWriter, req *http.Request) {
+    w.Header().Set("Content-Type", "application/csv")
+    w.Header().Set("Content-Disposition", `inline; filename="merch.csv"`)
+    getMerch(w)
+}
+
+func getVegHandler(w http.ResponseWriter, req *http.Request) {
+    w.Header().Set("Content-Type", "application/csv")
+    w.Header().Set("Content-Disposition", `inline; filename="veg.csv"`)
+    getVeg(w)
+}
+
+func getNonVegHandler(w http.ResponseWriter, req *http.Request) {
+    w.Header().Set("Content-Type", "application/csv")
+    w.Header().Set("Content-Disposition", `inline; filename="nonveg.csv"`)
+    getNonVeg(w)
+}
+
 func handleRoot(w http.ResponseWriter, req *http.Request) {
     url := "https://jumun2019-9c834.firebaseio.com/data_dump.json?shallow=true"
     response := genericFetch(url)
@@ -344,10 +368,23 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
                 max-width: 800px;
                 margin: auto;
             }
+            a {
+                color: inherit;
+            }
         </style>
         <body>
             <h1>JUMUN 2019 Delegate Information</h1>
-            <h3>`, len(dump), `</h3>
+            <h2 style="font-weight: bold;">Total applications: `, len(dump), `</h2>
+            <hr>
+            <h3>Download Excel data</h3>
+            <ul>
+                <li><a href="/single-deleg">Single Delegations</a></li>
+                <li><a href="/double-deleg">Double Delegations</a></li>
+                <li><a href="/merch">Merchandise Requests</a></li>
+                <li><a href="/accom">Accommodation Requests</a></li>
+                <li><a href="/veg">Veg Food Requests</a></li>
+                <li><a href="/nonveg">Non-Veg Food Requests</a></li>
+            </ul>
         </body>
         </html>
     `)
@@ -358,6 +395,10 @@ func main() {
     http.HandleFunc("/", handleRoot)
     http.HandleFunc("/single-deleg", getSingleDelegHandler)
     http.HandleFunc("/double-deleg", getDoubleDelegHandler)
+    http.HandleFunc("/merch", getMerchHandler)
+    http.HandleFunc("/accom", getAccomHandler)
+    http.HandleFunc("/veg", getVegHandler)
+    http.HandleFunc("/nonveg", getNonVegHandler)
     fmt.Println("Starting server at port " + port + "...")
     if err := http.ListenAndServe(":"+port, nil); err != nil {
         fmt.Println("ERROR: Serving failed", err)
