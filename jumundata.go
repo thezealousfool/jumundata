@@ -313,7 +313,12 @@ func getSingleDelegZipHandler(w http.ResponseWriter, req *http.Request) {
     getSingleDeleg(w, false)
 }
 
+func handleRoot(w http.ResponseWriter, req *http.Request) {
+    fmt.Fprint(w, "Hello World")
+}
+
 func main() {
+    http.HandleFunc("/", handleRoot)
     http.HandleFunc("/single-deleg", getSingleDelegHandler)
     http.HandleFunc("/single-deleg-zip", getSingleDelegZipHandler)
     http.HandleFunc("/double-deleg", getDoubleDelegHandler)
