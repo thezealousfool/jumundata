@@ -324,7 +324,7 @@ func getAccomHandler(w http.ResponseWriter, req *http.Request) {
 
 func getMerchHandler(w http.ResponseWriter, req *http.Request) {
     w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="merch.csv"`)
+    w.Header().Set("Content-Disposition", `inline; filename="merchandise.csv"`)
     getMerch(w)
 }
 
@@ -370,6 +370,9 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
             }
             a {
                 color: inherit;
+            }
+            li {
+                padding: 0.5em;
             }
         </style>
         <body>
