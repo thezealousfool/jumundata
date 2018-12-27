@@ -318,13 +318,14 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+    port := os.Getenv("PORT")
     http.HandleFunc("/", handleRoot)
     http.HandleFunc("/single-deleg", getSingleDelegHandler)
     http.HandleFunc("/single-deleg-zip", getSingleDelegZipHandler)
     http.HandleFunc("/double-deleg", getDoubleDelegHandler)
     http.HandleFunc("/double-deleg-zip", getDoubleDelegZipHandler)
-    fmt.Println("Starting server at port 1234...")
-    if err := http.ListenAndServe(":1234", nil); err != nil {
+    fmt.Println("Starting server at port " + port + "...")
+    if err := http.ListenAndServe(":"+port, nil); err != nil {
         fmt.Println("ERROR: Serving failed", err)
         return
     }
