@@ -185,17 +185,27 @@ func martialDoubleDelegation(body []byte) map[string]([][]string) {
 
 func generateCsv(w io.Writer, data [][]string) {
     csvWriter := csv.NewWriter(w)
+    if data == nil {
+        fmt.Fprint(w, "Error. Please contact Vivek")
+        return
+    }
     if err := csvWriter.WriteAll(data); err != nil {
         fmt.Println("ERROR: Error writing to CSV", err)
+        fmt.Fprint(w, "Error. Please contact Vivek")
         return
     }
 }
 
 func generateDoubleDelegCsv(w io.Writer, info map[string]([][]string)) {
     csvWriter := csv.NewWriter(os.Stdout)
+    if info == nil {
+        fmt.Fprint(w, "Error. Please contact Vivek")
+        return
+    }
     for committee := range info {
         if err := csvWriter.WriteAll(info[committee]); err != nil {
             fmt.Println("ERROR: Error writing to CSV", err)
+            fmt.Fprint(w, "Error. Please contact Vivek")
             return
         }
     }
@@ -203,9 +213,14 @@ func generateDoubleDelegCsv(w io.Writer, info map[string]([][]string)) {
 
 func generateSingleDelegCsv(w io.Writer, info map[string]([][]string)) {
     csvWriter := csv.NewWriter(os.Stdout)
+    if info == nil {
+        fmt.Fprint(w, "Error. Please contact Vivek")
+        return
+    }
     for committee := range info {
         if err := csvWriter.WriteAll(info[committee]); err != nil {
             fmt.Println("ERROR: Error writing to CSV", err)
+            fmt.Fprint(w, "Error. Please contact Vivek")
             return
         }
     }
@@ -295,25 +310,23 @@ func getDoubleDelegHandler(w http.ResponseWriter, req *http.Request) {
     getDoubleDeleg(w, true)
 }
 
-func getDoubleDelegZipHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/zip")
-    w.Header().Set("Content-Disposition", `inline; filename="double-delegation.zip"`)
-    getDoubleDeleg(w, false)
-}
-
 func getSingleDelegHandler(w http.ResponseWriter, req *http.Request) {
     w.Header().Set("Content-Type", "application/csv")
     w.Header().Set("Content-Disposition", `inline; filename="single-delegation.csv"`)
     getSingleDeleg(w, true)
 }
 
-func getSingleDelegZipHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/zip")
-    w.Header().Set("Content-Disposition", `inline; filename="single-delegation.zip"`)
-    getSingleDeleg(w, false)
-}
-
 func handleRoot(w http.ResponseWriter, req *http.Request) {
+    url := "https://jumun2019-9c834.firebaseio.com/data_dump.json?shallow=true"
+    response := genericFetch(url)
+    var dump map[string]bool
+    err := json.Unmarshal(response, &dump)
+    if err != nil {
+        fmt.Println("ERROR: Parsing JSON failed")
+        fmt.Println(err)
+        fmt.Fprint(w, "Error. Please contact Vivek")
+        return
+    }
     fmt.Fprint(w, `
         <!DOCTYPE html>
         <html lang="en">
@@ -322,8 +335,19 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
             <meta content="width=device-width,initial-scale=1,shrink-to-fit=no" name="viewport" />
             <title>JUMUN Data</title>
         </head>
+        <style>
+            * {
+                font-family: BlinkMacSystemFont,-apple-system,"Segoe UI","Fira Sans",Roboto,Ubuntu,Oxygen-Sans,Cantarell,"Helvetica Neue",Arial,sans-serif;
+                font-weight: 400;
+            }
+            body {
+                max-width: 800px;
+                margin: auto;
+            }
+        </style>
         <body>
-            <h1>Hello World</h1>
+            <h1>JUMUN 2019 Delegate Information</h1>
+            <h3>`, len(dump), `</h3>
         </body>
         </html>
     `)
@@ -333,9 +357,7 @@ func main() {
     port := os.Getenv("PORT")
     http.HandleFunc("/", handleRoot)
     http.HandleFunc("/single-deleg", getSingleDelegHandler)
-    http.HandleFunc("/single-deleg-zip", getSingleDelegZipHandler)
     http.HandleFunc("/double-deleg", getDoubleDelegHandler)
-    http.HandleFunc("/double-deleg-zip", getDoubleDelegZipHandler)
     fmt.Println("Starting server at port " + port + "...")
     if err := http.ListenAndServe(":"+port, nil); err != nil {
         fmt.Println("ERROR: Serving failed", err)
