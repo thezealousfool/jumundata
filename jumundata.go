@@ -365,6 +365,7 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
                 font-weight: 400;
             }
             body {
+                padding: 1rem;
                 max-width: 800px;
                 margin: auto;
             }
