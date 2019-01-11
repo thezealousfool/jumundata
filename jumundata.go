@@ -401,7 +401,6 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
 
 func main() {
     port := os.Getenv("PORT")
-    port = "8080"
     http.HandleFunc("/", handleRoot)
     http.HandleFunc("/single-deleg", getSingleDelegHandler)
     http.HandleFunc("/double-deleg", getDoubleDelegHandler)
