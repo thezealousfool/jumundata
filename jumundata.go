@@ -37,6 +37,7 @@ type SingleDelegation struct {
     Phone string `json:"phone"`
     Email string `json:"email"`
     Experience string `json:"experience"`
+    Ambassador string `json:"ambassador"`
     Preference1 Preference `json:"preference1"`
     Preference2 Preference `json:"preference2"`
 }
@@ -58,6 +59,7 @@ func (d SingleDelegationInfo) StringArrayMap() map[string]([][]string) {
 func (d SingleDelegation) StringArray() []string {
     return []string { strings.TrimSpace(d.Name),
                       strings.TrimSpace(d.Institution),
+                      strings.TrimSpace(d.Ambassador),
                       d.Phone,
                       strings.TrimSpace(d.Email),
                       strings.TrimSpace(d.Experience),
@@ -75,6 +77,7 @@ type DDDelegate struct {
     Phone string `json:"phone"`
     Email string `json:"email"`
     Experience string `json:"experience"`
+    Ambassador string `json:"ambassador"`
 }
 
 type DoubleDelegation struct {
@@ -101,11 +104,13 @@ func (d DoubleDelegationInfo) StringArrayMap() map[string]([][]string) {
 func (d DoubleDelegation) StringArray() []string {
     return []string { strings.TrimSpace(d.Delegate1.Name),
                       strings.TrimSpace(d.Delegate1.Institution),
+                      strings.TrimSpace(d.Delegate1.Ambassador),
                       d.Delegate1.Phone,
                       strings.TrimSpace(d.Delegate1.Email),
                       strings.TrimSpace(d.Delegate1.Experience),
                       strings.TrimSpace(d.Delegate2.Name),
                       strings.TrimSpace(d.Delegate2.Institution),
+                      strings.TrimSpace(d.Delegate2.Ambassador),
                       d.Delegate2.Phone,
                       strings.TrimSpace(d.Delegate2.Email),
                       strings.TrimSpace(d.Delegate2.Experience),
@@ -396,6 +401,7 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
 
 func main() {
     port := os.Getenv("PORT")
+    port = "8080"
     http.HandleFunc("/", handleRoot)
     http.HandleFunc("/single-deleg", getSingleDelegHandler)
     http.HandleFunc("/double-deleg", getDoubleDelegHandler)
