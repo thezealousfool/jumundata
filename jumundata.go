@@ -38,6 +38,7 @@ type SingleDelegation struct {
     Email string `json:"email"`
     Experience string `json:"experience"`
     Ambassador string `json:"ambassador"`
+    Referrer string `json:"referrer"`
     Preference1 Preference `json:"preference1"`
     Preference2 Preference `json:"preference2"`
 }
@@ -60,6 +61,7 @@ func (d SingleDelegation) StringArray() []string {
     return []string { strings.TrimSpace(d.Name),
                       strings.TrimSpace(d.Institution),
                       strings.TrimSpace(d.Ambassador),
+                      strings.TrimSpace(d.Referrer),
                       d.Phone,
                       strings.TrimSpace(d.Email),
                       strings.TrimSpace(d.Experience),
@@ -78,6 +80,7 @@ type DDDelegate struct {
     Email string `json:"email"`
     Experience string `json:"experience"`
     Ambassador string `json:"ambassador"`
+    Referrer string `json:"referrer"`
 }
 
 type DoubleDelegation struct {
@@ -105,12 +108,14 @@ func (d DoubleDelegation) StringArray() []string {
     return []string { strings.TrimSpace(d.Delegate1.Name),
                       strings.TrimSpace(d.Delegate1.Institution),
                       strings.TrimSpace(d.Delegate1.Ambassador),
+                      strings.TrimSpace(d.Delegate1.Referrer),
                       d.Delegate1.Phone,
                       strings.TrimSpace(d.Delegate1.Email),
                       strings.TrimSpace(d.Delegate1.Experience),
                       strings.TrimSpace(d.Delegate2.Name),
                       strings.TrimSpace(d.Delegate2.Institution),
                       strings.TrimSpace(d.Delegate2.Ambassador),
+                      strings.TrimSpace(d.Delegate2.Referrer),
                       d.Delegate2.Phone,
                       strings.TrimSpace(d.Delegate2.Email),
                       strings.TrimSpace(d.Delegate2.Experience),
