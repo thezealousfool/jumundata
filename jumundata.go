@@ -9,7 +9,7 @@ import (
     "encoding/csv"
     "os"
     "strings"
-    "sort"
+    // "sort"
     // "archive/zip"
 )
 
@@ -240,7 +240,7 @@ func getAccom(w io.Writer) {
     url := "https://jumun2019-9c834.firebaseio.com/accom.json"
     response := genericFetch(url)
     delegates := martialDelegates(response)
-    sort.Sort(ByName(delegates))
+    // sort.Sort(ByName(delegates))
     generateCsv(w, delegates)
 }
 
@@ -248,7 +248,7 @@ func getNonVeg(w io.Writer) {
     url := "https://jumun2019-9c834.firebaseio.com/nonveg.json"
     response := genericFetch(url)
     delegates := martialDelegates(response)
-    sort.Sort(ByName(delegates))
+    // sort.Sort(ByName(delegates))
     generateCsv(w, delegates)
 }
 
@@ -256,7 +256,7 @@ func getVeg(w io.Writer) {
     url := "https://jumun2019-9c834.firebaseio.com/veg.json"
     response := genericFetch(url)
     delegates := martialDelegates(response)
-    sort.Sort(ByName(delegates))
+    // sort.Sort(ByName(delegates))
     generateCsv(w, delegates)
 }
 
@@ -264,7 +264,7 @@ func getMerch(w io.Writer) {
     url := "https://jumun2019-9c834.firebaseio.com/merch.json"
     response := genericFetch(url)
     delegates := martialDelegates(response)
-    sort.Sort(ByName(delegates))
+    // sort.Sort(ByName(delegates))
     generateCsv(w, delegates)
 }
 
@@ -281,12 +281,12 @@ func getSingleDeleg(w io.Writer, flat bool) {
         for committee := range info {
             data = append(data, info[committee]...)
         }
-        sort.Sort(ByName(data))
+        // sort.Sort(ByName(data))
         generateCsv(w, data)
     } else {
-        for committee := range info {
-            sort.Sort(ByName(info[committee]))
-        }
+        // for committee := range info {
+            // sort.Sort(ByName(info[committee]))
+        // }
         generateSingleDelegCsv(w, info)
     }
 }
@@ -304,12 +304,12 @@ func getDoubleDeleg(w io.Writer, flat bool) {
         for committee := range info {
             data = append(data, info[committee]...)
         }
-        sort.Sort(ByName(data))
+        // sort.Sort(ByName(data))
         generateCsv(w, data)
     } else {
-        for committee := range info {
-            sort.Sort(ByName(info[committee]))
-        }
+        // for committee := range info {
+            // sort.Sort(ByName(info[committee]))
+        // }
         generateDoubleDelegCsv(w, info)
     }
 }
