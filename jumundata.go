@@ -9,9 +9,11 @@ import (
     "encoding/csv"
     "os"
     "strings"
-    // "sort"
-    // "archive/zip"
+    "sort"
+    "strconv"
 )
+
+var nrounds = 2
 
 type Delegate struct {
     Name string `json:"name"`
@@ -206,160 +208,140 @@ func generateCsv(w io.Writer, data [][]string) {
     }
 }
 
-func generateDoubleDelegCsv(w io.Writer, info map[string]([][]string)) {
-    csvWriter := csv.NewWriter(os.Stdout)
-    if info == nil {
-        fmt.Fprint(w, "Error. Please contact Vivek")
-        return
-    }
+func flatMap(info map[string]([][]string)) [][]string {
+    totalLength := 0
     for committee := range info {
-        if err := csvWriter.WriteAll(info[committee]); err != nil {
-            fmt.Println("ERROR: Error writing to CSV", err)
-            fmt.Fprint(w, "Error. Please contact Vivek")
-            return
-        }
+        totalLength += len(info[committee])
     }
-}
-
-func generateSingleDelegCsv(w io.Writer, info map[string]([][]string)) {
-    csvWriter := csv.NewWriter(os.Stdout)
-    if info == nil {
-        fmt.Fprint(w, "Error. Please contact Vivek")
-        return
-    }
+    var data = make([][]string, 0, totalLength)
     for committee := range info {
-        if err := csvWriter.WriteAll(info[committee]); err != nil {
-            fmt.Println("ERROR: Error writing to CSV", err)
-            fmt.Fprint(w, "Error. Please contact Vivek")
-            return
-        }
+        data = append(data, info[committee]...)
     }
+    return data
 }
 
-func getAccom(w io.Writer) {
-    url := "https://jumun2019-9c834.firebaseio.com/accom.json"
+func genericDelegateRound(w io.Writer, json string, round string, parse func([]byte) [][]string) {
+    fmt.Println("LOG: " + json + " Round "+round)
+    url := "https://jumun2019-9c834.firebaseio.com/"
+    if round == "1" {
+        url += json
+    } else if round == "all" {
+        var finalResponse [][]string
+        for r := 1; r <= nrounds; r++ {
+            u := url
+            if r == 1 {
+                u += json
+            } else {
+                u += "round" + strconv.Itoa(r) + "/" + json
+            }
+            response := genericFetch(url)
+            delegates := parse(response)
+            sort.Sort(ByName(delegates))
+            finalResponse = append(finalResponse, delegates...)
+        }
+        generateCsv(w, finalResponse)
+        return
+    } else {
+        url += "round" + round + "/" + json
+    }
     response := genericFetch(url)
-    delegates := martialDelegates(response)
-    // sort.Sort(ByName(delegates))
+    delegates := parse(response)
+    sort.Sort(ByName(delegates))
     generateCsv(w, delegates)
 }
 
-func getNonVeg(w io.Writer) {
-    url := "https://jumun2019-9c834.firebaseio.com/nonveg.json"
-    response := genericFetch(url)
-    delegates := martialDelegates(response)
-    // sort.Sort(ByName(delegates))
-    generateCsv(w, delegates)
+func parseDelegates(response []byte) [][]string {
+    return martialDelegates(response)
 }
 
-func getVeg(w io.Writer) {
-    url := "https://jumun2019-9c834.firebaseio.com/veg.json"
-    response := genericFetch(url)
-    delegates := martialDelegates(response)
-    // sort.Sort(ByName(delegates))
-    generateCsv(w, delegates)
-}
-
-func getMerch(w io.Writer) {
-    url := "https://jumun2019-9c834.firebaseio.com/merch.json"
-    response := genericFetch(url)
-    delegates := martialDelegates(response)
-    // sort.Sort(ByName(delegates))
-    generateCsv(w, delegates)
-}
-
-func getSingleDeleg(w io.Writer, flat bool) {
-    url := "https://jumun2019-9c834.firebaseio.com/single_deleg.json"
-    response := genericFetch(url)
+func parseSingleDelegates(response []byte) [][]string {
     info := martialSingleDelegation(response)
-    if flat {
-        totalLength := 0
-        for committee := range info {
-            totalLength += len(info[committee])
-        }
-        var data = make([][]string, 0, totalLength)
-        for committee := range info {
-            data = append(data, info[committee]...)
-        }
-        // sort.Sort(ByName(data))
-        generateCsv(w, data)
-    } else {
-        // for committee := range info {
-            // sort.Sort(ByName(info[committee]))
-        // }
-        generateSingleDelegCsv(w, info)
-    }
+    return flatMap(info)
 }
 
-func getDoubleDeleg(w io.Writer, flat bool) {
-    url := "https://jumun2019-9c834.firebaseio.com/double_deleg.json"
-    response := genericFetch(url)
+func parseDoubleDelegates(response []byte) [][]string {
     info := martialDoubleDelegation(response)
-    if flat {
-        totalLength := 0
-        for committee := range info {
-            totalLength += len(info[committee])
-        }
-        var data = make([][]string, 0, totalLength)
-        for committee := range info {
-            data = append(data, info[committee]...)
-        }
-        // sort.Sort(ByName(data))
-        generateCsv(w, data)
-    } else {
-        // for committee := range info {
-            // sort.Sort(ByName(info[committee]))
-        // }
-        generateDoubleDelegCsv(w, info)
+    return flatMap(info)
+}
+
+func getAccom(w io.Writer, round string) {
+    genericDelegateRound(w, "accom.json", round, parseDelegates)
+}
+
+func getNonVeg(w io.Writer, round string) {
+    genericDelegateRound(w, "nonveg.json", round, parseDelegates)
+}
+
+func getVeg(w io.Writer, round string) {
+    genericDelegateRound(w, "veg.json", round, parseDelegates)
+}
+
+func getMerch(w io.Writer, round string) {
+    genericDelegateRound(w, "merch.json", round, parseDelegates)
+}
+
+func getSingleDeleg(w io.Writer, round string) {
+    genericDelegateRound(w, "single_deleg.json", round, parseSingleDelegates)
+}
+
+func getDoubleDeleg(w io.Writer, round string) {
+    genericDelegateRound(w, "double_deleg.json", round, parseDoubleDelegates)
+}
+
+func parseRoundAndCall(w http.ResponseWriter, req *http.Request, filename string, fn func(io.Writer,string)) {
+    w.Header().Set("Content-Type", "application/csv")
+    w.Header().Set("Content-Disposition", `inline; filename="` + filename + `"`)
+    round, err := req.URL.Query()["round"]
+    if !err {
+        fmt.Println("ERROR: Error reading URL param round", filename, " '", round, "'")
+        fmt.Fprint(w, "Error. Please contact Vivek")
+        return
     }
+    fn(w, round[0])
 }
 
 func getDoubleDelegHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="double-delegation.csv"`)
-    getDoubleDeleg(w, true)
+    parseRoundAndCall(w,req,"double-delegation.csv",getDoubleDeleg)
 }
 
 func getSingleDelegHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="single-delegation.csv"`)
-    getSingleDeleg(w, true)
+    parseRoundAndCall(w,req,"single-delegation.csv",getSingleDeleg)
 }
 
 func getAccomHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="accommodation.csv"`)
-    getAccom(w)
+    parseRoundAndCall(w,req,"accommodation.csv",getAccom)
 }
 
 func getMerchHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="merchandise.csv"`)
-    getMerch(w)
+    parseRoundAndCall(w,req,"merchandise.csv",getMerch)
 }
 
 func getVegHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="veg.csv"`)
-    getVeg(w)
+    parseRoundAndCall(w,req,"veg.csv",getVeg)
 }
 
 func getNonVegHandler(w http.ResponseWriter, req *http.Request) {
-    w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="nonveg.csv"`)
-    getNonVeg(w)
+    parseRoundAndCall(w,req,"nonveg.csv",getNonVeg)
 }
 
 func handleRoot(w http.ResponseWriter, req *http.Request) {
-    url := "https://jumun2019-9c834.firebaseio.com/data_dump.json?shallow=true"
-    response := genericFetch(url)
+    url := "https://jumun2019-9c834.firebaseio.com/"
     var dump map[string]bool
-    err := json.Unmarshal(response, &dump)
-    if err != nil {
-        fmt.Println("ERROR: Parsing JSON failed")
-        fmt.Println(err)
-        fmt.Fprint(w, "Error. Please contact Vivek")
-        return
+    for round := 1; round <= nrounds; round++ {
+        u := url
+        if round == 1 {
+            u += "data_dump.json?shallow=true"
+        } else {
+            u += "round" + strconv.Itoa(round) + "/data_dump.json?shallow=true"
+        }
+        response := genericFetch(u)
+        err := json.Unmarshal(response, &dump)
+        if err != nil {
+            fmt.Println("ERROR: Parsing JSON failed")
+            fmt.Println(err)
+            fmt.Fprint(w, "Error. Please contact Vivek")
+            return
+        }
     }
     fmt.Fprint(w, `
         <!DOCTYPE html>
@@ -390,14 +372,32 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
             <h1>JUMUN 2019 Delegate Information</h1>
             <h2 style="font-weight: bold;">Total applications: `, len(dump), `</h2>
             <hr>
-            <h3>Download Excel data</h3>
+            <h3>Round 1</h3>
             <ul>
-                <li><a href="/single-deleg">Single Delegations</a></li>
-                <li><a href="/double-deleg">Double Delegations</a></li>
-                <li><a href="/merch">Merchandise Requests</a></li>
-                <li><a href="/accom">Accommodation Requests</a></li>
-                <li><a href="/veg">Veg Food Requests</a></li>
-                <li><a href="/nonveg">Non-Veg Food Requests</a></li>
+                <li><a href="/single-deleg?round=1">Single Delegations</a></li>
+                <li><a href="/double-deleg?round=1">Double Delegations</a></li>
+                <li><a href="/merch?round=1">Merchandise Requests</a></li>
+                <li><a href="/accom?round=1">Accommodation Requests</a></li>
+                <li><a href="/veg?round=1">Veg Food Requests</a></li>
+                <li><a href="/nonveg?round=1">Non-Veg Food Requests</a></li>
+            </ul>
+            <h3>Round 2</h3>
+            <ul>
+                <li><a href="/single-deleg?round=2">Single Delegations</a></li>
+                <li><a href="/double-deleg?round=2">Double Delegations</a></li>
+                <li><a href="/merch?round=2">Merchandise Requests</a></li>
+                <li><a href="/accom?round=2">Accommodation Requests</a></li>
+                <li><a href="/veg?round=2">Veg Food Requests</a></li>
+                <li><a href="/nonveg?round=2">Non-Veg Food Requests</a></li>
+            </ul>
+            <h3>All Delegations</h3>
+            <ul>
+                <li><a href="/single-deleg?round=all">Single Delegations</a></li>
+                <li><a href="/double-deleg?round=all">Double Delegations</a></li>
+                <li><a href="/merch?round=all">Merchandise Requests</a></li>
+                <li><a href="/accom?round=all">Accommodation Requests</a></li>
+                <li><a href="/veg?round=all">Veg Food Requests</a></li>
+                <li><a href="/nonveg?round=all">Non-Veg Food Requests</a></li>
             </ul>
         </body>
         </html>
