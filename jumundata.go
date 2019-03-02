@@ -11,9 +11,26 @@ import (
     "strings"
     "sort"
     "strconv"
+    "time"
 )
 
-var nrounds = 2
+var nrounds = 3
+var push_cars = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+
+func firebaseTimestamp(id string) int64 {
+    id = id[0:8]
+    var timestamp int64
+    timestamp = 0
+    for i := 0; i < len(id); i++ {
+        timestamp = timestamp * 64 + int64(strings.Index(push_cars, string(id[i])))
+    }
+    return timestamp/1000
+}
+
+type sstring struct {
+    t time.Time
+    s []string
+}
 
 type Delegate struct {
     Name string `json:"name"`
@@ -23,8 +40,13 @@ type Delegate struct {
 
 type DelegateInfo map[string]Delegate
 
-func (d Delegate) StringArray() []string {
-    return []string {strings.TrimSpace(d.Name), d.Phone, strings.TrimSpace(d.Email)}
+func (d Delegate) StringArray(key string) sstring {
+    return sstring {
+        time.Unix(firebaseTimestamp(key),0),
+        []string {
+            strings.TrimSpace(d.Name),
+            d.Phone,
+            strings.TrimSpace(d.Email) } }
 }
 
 type Preference struct {
@@ -47,20 +69,21 @@ type SingleDelegation struct {
 
 type SingleDelegationInfo map[string](map[string]SingleDelegation)
 
-func (d SingleDelegationInfo) StringArrayMap() map[string]([][]string) {
-    result := make(map[string]([][]string))
+func (d SingleDelegationInfo) StringArrayMap() map[string]([]sstring) {
+    result := make(map[string]([]sstring))
     for pref1Committee := range d {
-        array := make([][]string, 0, len(d[pref1Committee]))
+        array := make([]sstring, 0, len(d[pref1Committee]))
         for delegate_id := range d[pref1Committee] {
-            array = append(array, d[pref1Committee][delegate_id].StringArray())
+            array = append(array, d[pref1Committee][delegate_id].StringArray(delegate_id))
         }
         result[pref1Committee] = array
     }
     return result
 }
 
-func (d SingleDelegation) StringArray() []string {
-    return []string { strings.TrimSpace(d.Name),
+func (d SingleDelegation) StringArray(key string) sstring {
+    return sstring { time.Unix(firebaseTimestamp(key),0),
+           []string { strings.TrimSpace(d.Name),
                       strings.TrimSpace(d.Institution),
                       strings.TrimSpace(d.Ambassador),
                       strings.TrimSpace(d.Referrer),
@@ -72,7 +95,7 @@ func (d SingleDelegation) StringArray() []string {
                       d.Preference1.Country2,
                       d.Preference2.Committee,
                       d.Preference2.Country1,
-                      d.Preference2.Country2 }
+                      d.Preference2.Country2 } }
 }
 
 type DDDelegate struct {
@@ -94,20 +117,21 @@ type DoubleDelegation struct {
 
 type DoubleDelegationInfo map[string](map[string]DoubleDelegation)
 
-func (d DoubleDelegationInfo) StringArrayMap() map[string]([][]string) {
-    result := make(map[string]([][]string))
+func (d DoubleDelegationInfo) StringArrayMap() map[string]([]sstring) {
+    result := make(map[string]([]sstring))
     for pref1Committee := range d {
-        array := make([][]string, 0, len(d[pref1Committee]))
+        array := make([]sstring, 0, len(d[pref1Committee]))
         for delegate_id := range d[pref1Committee] {
-            array = append(array, d[pref1Committee][delegate_id].StringArray())
+            array = append(array, d[pref1Committee][delegate_id].StringArray(delegate_id))
         }
         result[pref1Committee] = array
     }
     return result
 }
 
-func (d DoubleDelegation) StringArray() []string {
-    return []string { strings.TrimSpace(d.Delegate1.Name),
+func (d DoubleDelegation) StringArray(key string) sstring {
+    return sstring { time.Unix(firebaseTimestamp(key), 0),
+           []string { strings.TrimSpace(d.Delegate1.Name),
                       strings.TrimSpace(d.Delegate1.Institution),
                       strings.TrimSpace(d.Delegate1.Ambassador),
                       strings.TrimSpace(d.Delegate1.Referrer),
@@ -126,15 +150,20 @@ func (d DoubleDelegation) StringArray() []string {
                       d.Preference1.Country2,
                       d.Preference2.Committee,
                       d.Preference2.Country1,
-                      d.Preference2.Country2 }
+                      d.Preference2.Country2 } }
 }
 
 
-type ByName [][]string
+type ByName []sstring
+type ByTime []sstring
 
 func (a ByName) Len() int { return len(a) }
 func (a ByName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByName) Less(i, j int) bool { return a[i][0] < a[j][0] }
+func (a ByName) Less(i, j int) bool { return a[i].s[0] < a[j].s[0] }
+
+func (a ByTime) Len() int { return len(a) }
+func (a ByTime) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByTime) Less(i, j int) bool { return a[i].t.Before(a[j].t) }
 
 func genericFetch(url string) []byte {
     resp, err := http.Get(url)
@@ -158,7 +187,7 @@ func genericFetch(url string) []byte {
     return bodyBytes
 }
 
-func martialDelegates(body []byte) [][]string {
+func martialDelegates(body []byte) []sstring {
     var delegateInfo DelegateInfo
     err := json.Unmarshal(body, &delegateInfo)
     if err != nil {
@@ -166,14 +195,14 @@ func martialDelegates(body []byte) [][]string {
         fmt.Println(err)
         return nil
     }
-    delegates := make([][]string, 0, len(delegateInfo))
+    delegates := make([]sstring, 0, len(delegateInfo))
     for k := range delegateInfo {
-        delegates = append(delegates, delegateInfo[k].StringArray())
+        delegates = append(delegates, delegateInfo[k].StringArray(k))
     }
     return delegates
 }
 
-func martialSingleDelegation(body []byte) map[string]([][]string) {
+func martialSingleDelegation(body []byte) map[string]([]sstring) {
     var singleDelegateInfo SingleDelegationInfo
     err := json.Unmarshal(body, &singleDelegateInfo)
     if err != nil {
@@ -184,7 +213,7 @@ func martialSingleDelegation(body []byte) map[string]([][]string) {
     return singleDelegateInfo.StringArrayMap()
 }
 
-func martialDoubleDelegation(body []byte) map[string]([][]string) {
+func martialDoubleDelegation(body []byte) map[string]([]sstring) {
     var doubleDelegateInfo DoubleDelegationInfo
     err := json.Unmarshal(body, &doubleDelegateInfo)
     if err != nil {
@@ -195,38 +224,42 @@ func martialDoubleDelegation(body []byte) map[string]([][]string) {
     return doubleDelegateInfo.StringArrayMap()
 }
 
-func generateCsv(w io.Writer, data [][]string) {
+func generateCsv(w io.Writer, data []sstring) {
     csvWriter := csv.NewWriter(w)
     if data == nil {
         fmt.Fprint(w, "Error. Please contact Vivek")
         return
     }
-    if err := csvWriter.WriteAll(data); err != nil {
-        fmt.Println("ERROR: Error writing to CSV", err)
-        fmt.Fprint(w, "Error. Please contact Vivek")
-        return
+    for rec := range data {
+        err := csvWriter.Write(data[rec].s)
+        if err != nil {
+            fmt.Println("ERROR: Error writing to CSV", err)
+            fmt.Fprint(w, "Error. Please contact Vivek")
+            return
+        }
     }
+    csvWriter.Flush()
 }
 
-func flatMap(info map[string]([][]string)) [][]string {
+func flatMap(info map[string]([]sstring)) []sstring {
     totalLength := 0
     for committee := range info {
         totalLength += len(info[committee])
     }
-    var data = make([][]string, 0, totalLength)
+    var data = make([]sstring, 0, totalLength)
     for committee := range info {
         data = append(data, info[committee]...)
     }
     return data
 }
 
-func genericDelegateRound(w io.Writer, json string, round string, parse func([]byte) [][]string) {
+func genericDelegateRound(w io.Writer, json string, round string, parse func([]byte) []sstring) {
     fmt.Println("LOG: " + json + " Round "+round)
     url := "https://jumun2019-9c834.firebaseio.com/"
     if round == "1" {
         url += json
     } else if round == "all" {
-        var finalResponse [][]string
+        var finalResponse []sstring
         for r := 1; r <= nrounds; r++ {
             u := url
             if r == 1 {
@@ -236,7 +269,7 @@ func genericDelegateRound(w io.Writer, json string, round string, parse func([]b
             }
             response := genericFetch(url)
             delegates := parse(response)
-            sort.Sort(ByName(delegates))
+            sort.Sort(ByTime(delegates))
             finalResponse = append(finalResponse, delegates...)
         }
         generateCsv(w, finalResponse)
@@ -246,20 +279,20 @@ func genericDelegateRound(w io.Writer, json string, round string, parse func([]b
     }
     response := genericFetch(url)
     delegates := parse(response)
-    sort.Sort(ByName(delegates))
+    sort.Sort(ByTime(delegates))
     generateCsv(w, delegates)
 }
 
-func parseDelegates(response []byte) [][]string {
+func parseDelegates(response []byte) []sstring {
     return martialDelegates(response)
 }
 
-func parseSingleDelegates(response []byte) [][]string {
+func parseSingleDelegates(response []byte) []sstring {
     info := martialSingleDelegation(response)
     return flatMap(info)
 }
 
-func parseDoubleDelegates(response []byte) [][]string {
+func parseDoubleDelegates(response []byte) []sstring {
     info := martialDoubleDelegation(response)
     return flatMap(info)
 }
@@ -289,39 +322,39 @@ func getDoubleDeleg(w io.Writer, round string) {
 }
 
 func parseRoundAndCall(w http.ResponseWriter, req *http.Request, filename string, fn func(io.Writer,string)) {
-    w.Header().Set("Content-Type", "application/csv")
-    w.Header().Set("Content-Disposition", `inline; filename="` + filename + `"`)
     round, err := req.URL.Query()["round"]
     if !err {
         fmt.Println("ERROR: Error reading URL param round", filename, " '", round, "'")
         fmt.Fprint(w, "Error. Please contact Vivek")
         return
     }
+    w.Header().Set("Content-Type", "application/csv")
+    w.Header().Set("Content-Disposition", `inline; filename="` + filename + "_round_" + round[0] + ".csv" + `"`)
     fn(w, round[0])
 }
 
 func getDoubleDelegHandler(w http.ResponseWriter, req *http.Request) {
-    parseRoundAndCall(w,req,"double-delegation.csv",getDoubleDeleg)
+    parseRoundAndCall(w,req,"double-delegation",getDoubleDeleg)
 }
 
 func getSingleDelegHandler(w http.ResponseWriter, req *http.Request) {
-    parseRoundAndCall(w,req,"single-delegation.csv",getSingleDeleg)
+    parseRoundAndCall(w,req,"single-delegation",getSingleDeleg)
 }
 
 func getAccomHandler(w http.ResponseWriter, req *http.Request) {
-    parseRoundAndCall(w,req,"accommodation.csv",getAccom)
+    parseRoundAndCall(w,req,"accommodation",getAccom)
 }
 
 func getMerchHandler(w http.ResponseWriter, req *http.Request) {
-    parseRoundAndCall(w,req,"merchandise.csv",getMerch)
+    parseRoundAndCall(w,req,"merchandise",getMerch)
 }
 
 func getVegHandler(w http.ResponseWriter, req *http.Request) {
-    parseRoundAndCall(w,req,"veg.csv",getVeg)
+    parseRoundAndCall(w,req,"veg",getVeg)
 }
 
 func getNonVegHandler(w http.ResponseWriter, req *http.Request) {
-    parseRoundAndCall(w,req,"nonveg.csv",getNonVeg)
+    parseRoundAndCall(w,req,"nonveg",getNonVeg)
 }
 
 func handleRoot(w http.ResponseWriter, req *http.Request) {
@@ -389,6 +422,15 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
                 <li><a href="/accom?round=2">Accommodation Requests</a></li>
                 <li><a href="/veg?round=2">Veg Food Requests</a></li>
                 <li><a href="/nonveg?round=2">Non-Veg Food Requests</a></li>
+            </ul>
+            <h3>Round 3</h3>
+            <ul>
+                <li><a href="/single-deleg?round=3">Single Delegations</a></li>
+                <li><a href="/double-deleg?round=3">Double Delegations</a></li>
+                <li><a href="/merch?round=3">Merchandise Requests</a></li>
+                <li><a href="/accom?round=3">Accommodation Requests</a></li>
+                <li><a href="/veg?round=3">Veg Food Requests</a></li>
+                <li><a href="/nonveg?round=3">Non-Veg Food Requests</a></li>
             </ul>
             <h3>All Delegations</h3>
             <ul>
