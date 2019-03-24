@@ -14,7 +14,7 @@ import (
     "time"
 )
 
-var nrounds = 3
+var nrounds = 4
 var push_cars = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
 func firebaseTimestamp(id string) int64 {
@@ -431,6 +431,15 @@ func handleRoot(w http.ResponseWriter, req *http.Request) {
                 <li><a href="/accom?round=3">Accommodation Requests</a></li>
                 <li><a href="/veg?round=3">Veg Food Requests</a></li>
                 <li><a href="/nonveg?round=3">Non-Veg Food Requests</a></li>
+            </ul>
+            <h3>Rolling Round</h3>
+            <ul>
+                <li><a href="/single-deleg?round=4">Single Delegations</a></li>
+                <li><a href="/double-deleg?round=4">Double Delegations</a></li>
+                <li><a href="/merch?round=4">Merchandise Requests</a></li>
+                <li><a href="/accom?round=4">Accommodation Requests</a></li>
+                <li><a href="/veg?round=4">Veg Food Requests</a></li>
+                <li><a href="/nonveg?round=4">Non-Veg Food Requests</a></li>
             </ul>
             <h3>All Delegations</h3>
             <ul>
